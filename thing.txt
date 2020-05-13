@@ -1,0 +1,1 @@
+psql -c  "COPY(SELECT player_type, player_id, time_start as timestamp, match_id, team_num as team_id, win FROM reckoner.matchrows ORDER BY time_start ASC) TO stdout with CSV HEADER" > 'basic-output.csv'

@@ -1,0 +1,4 @@
+name = "Reckoner"
+uuid = "bbd1d0f0-76cb-11ea-2afc-bb8485d7c580"
+authors = ["Thalassocracy <42811940+Thalassocracy@users.noreply.github.com>"]
+version = "0.1.0"
