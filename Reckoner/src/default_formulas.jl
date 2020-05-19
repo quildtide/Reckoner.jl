@@ -155,14 +155,17 @@ function default_eff_challenge(benchmarks::Vector{Beta{Float64}}, teams::Vector{
 
     marginals::Vector{Beta{Float64}} = Vector{Beta{Float64}}(undef, n)
 
+    team_count::Int64 = length(unique(teams))
+
     for i in 1:n
         opponents::Vector{Beta{Float64}} = benchmarks[teams .!= teams[i]]
         team_size::Int64 = sum(teams .== teams[i])
         if (team_size > 1) 
             teammates::Vector{Beta{Float64}} = reflect.(benchmarks[(teams .== teams[i]) .& (1:end .!= i)])
-            marginals[i] = scale(geom_mean(vcat(opponents, teammates)), n - 1)
+            temp::Vector{Beta{Float64}} = vcat(opponents, teammates)
+            marginals[i] = Beta(sum(alpha.(temp)), sum(beta.(temp)) / (team_count - 1))
         else
-            marginals[i] = scale(geom_mean(opponents), n - 1)
+            marginals[i] = Beta(sum(alpha.(opponents)), sum(beta.(opponents)) / (team_count - 1))
         end
     end
 
@@ -207,17 +210,31 @@ function default_rank_interval(skill::Beta{Float64})::Tuple{Float64, Float64}
 end
 
 function default_display_rank(win_chance::Real)::Float64
-    base_display::Int32 = 1500
+    base_display::Int32 = 1000
 
     display_rank::Float64 = base_display / (1 - win_chance) - base_display
 
-    # threshold::Int32 = 2000
+    threshold::Int32 = 2000
 
-    # if (display_rank > threshold)
-    #     display_rank = log(display_rank) / log(threshold) * threshold
-    # end
+    if (display_rank > threshold)
+        display_rank = log(display_rank) / log(threshold) * threshold
+    end
 
-    # display_rank
+    display_rank
+end
+
+function default_display_rank(win_chance::Real, ratio::Real)::Float64
+    base_display::Int32 = 1000
+
+    display_rank::Float64 = base_display * (1 / (1 - win_chance) - ratio)
+
+    threshold::Int32 = 2000
+
+    if (display_rank > threshold)
+        display_rank = log(display_rank) / log(threshold) * threshold
+    end
+
+    display_rank
 end
 
 function bradley_terry_display(win_chance::Real)::Float64
@@ -281,8 +298,8 @@ function win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Intege
     inst.win_chances(local_skills, teams)
 end
 
-function display_rank(win_chance::Real, inst::ReckonerInstance{R,T} = reckoner_defaults)::Float64 where {R, T}
-    inst.display_rank(win_chance)
+function display_rank(win_chance::Real, ratio::Real, inst::ReckonerInstance{R,T} = reckoner_defaults)::Float64 where {R, T}
+    inst.display_rank(win_chance, ratio)
 end
 
 

@@ -25,7 +25,7 @@ end
 
 challenge(m::PAMatch)::Beta{Float64} = Beta(m.alpha, m.beta)
 timestamp(m::PAMatch)::Int64 = m.timestamp
-win(m::PAMatch)::Int64 = m.win
+win(m::PAMatch)::Int16 = (if m.win 2 elseif (m.all_dead && m.team_count == 2) 1 else 0 end)
 team_id(m::PAMatch)::Int16 = m.team_id
 eco(m::PAMatch)::Float64 = m.eco
 eco_mean(m::PAMatch)::Float64 = m.eco_mean
@@ -83,10 +83,9 @@ end
 
 challenge(matches::PAMatches) = matches.challenge
 timestamp(matches::PAMatches) = matches.timestamp
-win(matches::PAMatches) = matches.win
-team_id(m::PAMatches)::Int16 = m.team_id
-eco(m::PAMatches)::Float64 = m.eco
-eco_mean(m::PAMatches)::Float64 = m.eco_mean
+win(m::PAMatches)::Vector{Int16} = 2 .* (m.win .& .!(m.all_dead))  + 1 .* (m.all_dead .& (m.team_count .== 2))
+eco(m::PAMatches)::Vector{Float64} = m.eco
+eco_mean(m::PAMatches)::Vector{Float64} = m.eco_mean
 
 function PAMatches(intable)::PAMatches
     cols = Tables.columns(intable)
@@ -248,4 +247,15 @@ function pa_weight(curr::PAMatch, prev)::Float64
 
 end
 
-pa_reck = ReckonerInstance{PAMatch, PAMatches}(AUP = pa_aup, av_challenge = pa_av_challenge, weight = pa_weight, display_rank = elo_display)
+function pa_skill(wins::Vector{Int16}, weights::Vector{<:Real})::Beta{Float64}
+    a::Float64 = sum(weights .* (wins ./ 2))
+    b::Float64 = sum(weights .* (1 .- wins ./ 2))
+
+    if (isnan(a) || isnan(b)) print(weights, "\n") end
+
+    if ((a <= 0) || (b <= 0)) print(a, ", ", b, "\n") end
+
+    Beta(a, b)
+end
+
+pa_reck = ReckonerInstance{PAMatch, PAMatches}(AUP = pa_aup, av_challenge = pa_av_challenge, weight = pa_weight, skill = pa_skill)

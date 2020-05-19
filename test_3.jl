@@ -69,11 +69,14 @@ function gen_past(locus::Vector{PAMatch}, prev::PAMatches)::Vector{PAMatches}
 end
 
 function test_reckoner_2(input::Dict{PlayerId, PAMatches}, locus::Vector{PAMatch}, output_name::String)::Nothing
+    ratio::Float64 = locus[1].team_size / (locus[1].team_size_mean * locus[1].team_count - locus[1].team_size)
+
     players::Vector{PlayerId} = [i for i in keys(input)]
     skills::Vector{Beta{Float64}} = [benchmarks(locus, gen_past(locus, input[i]), inst)[1] for i in players]
-    rank_center::Vector{Float64} = display_rank.(mean.(skills), (inst,))
-    lb::Vector{Float64} = display_rank.(quantile.(skills, [.25]), (inst,))
-    ub::Vector{Float64} = display_rank.(quantile.(skills, [.75]), (inst,))
+
+    rank_center::Vector{Float64} = display_rank.(mean.(skills), ratio, (inst,))
+    lb::Vector{Float64} = display_rank.(quantile.(skills, [.25]), ratio, (inst,))
+    ub::Vector{Float64} = display_rank.(quantile.(skills, [.75]), ratio, (inst,))
     a::Vector{Float64} = alpha.(skills)
     b::Vector{Float64} = beta.(skills)
     player_id::Vector{String} = [i[2] for i in players]
