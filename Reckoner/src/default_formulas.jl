@@ -163,9 +163,9 @@ function default_eff_challenge(benchmarks::Vector{Beta{Float64}}, teams::Vector{
         if (team_size > 1) 
             teammates::Vector{Beta{Float64}} = reflect.(benchmarks[(teams .== teams[i]) .& (1:end .!= i)])
             temp::Vector{Beta{Float64}} = vcat(opponents, teammates)
-            marginals[i] = Beta(sum(alpha.(temp)), sum(beta.(temp)) / (team_count - 1))
+            marginals[i] = Beta(mean(alpha.(temp)), mean(beta.(temp)) / (team_count - 1))
         else
-            marginals[i] = Beta(sum(alpha.(opponents)), sum(beta.(opponents)) / (team_count - 1))
+            marginals[i] = Beta(mean(alpha.(opponents)), mean(beta.(opponents)) / (team_count - 1))
         end
     end
 

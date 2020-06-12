@@ -21,6 +21,7 @@ struct PAMatch <: AbstractMatch
     titans::Bool
     ranked::Bool
     tourney::Bool
+    unknown_eco::Bool
 end
 
 challenge(m::PAMatch)::Beta{Float64} = Beta(m.alpha, m.beta)
@@ -34,8 +35,21 @@ check_bool(input::Bool)::Bool = input
 
 check_bool(input::String)::Bool = (input == "t" || input == "true")
 
-check_bool(input::Missing)::Bool = false
+check_bool_f(input)::Bool = check_bool(input)
+
+check_bool_t(input)::Bool = check_bool(input)
+
+check_bool_f(input::Missing)::Bool = false
+
+check_bool_t(input::Missing)::Bool = true
     
+function replace_missing(input::T, def::T)::T where {T}
+    input
+end
+
+function replace_missing(input::Missing, def::T)::T where {T}
+    def
+end
 
 function PAMatch(inp)::PAMatch
     # PAMatch(Beta(0.5, 0.5), inrow.timestamp, inrow.win, inrow.team_id)
@@ -50,16 +64,22 @@ function PAMatch(inp)::PAMatch
         beta = 0.5
     end 
 
+    eco::Float64 = replace_missing(inp.eco, 1.0)
+    eco_mean::Float64 = replace_missing(inp.eco_mean, 1.0)
+    eco_var::Float64 = replace_missing(inp.eco_var, 0.0)
+
+    unknown_eco::Bool = ismissing(inp.eco) | ismissing(inp.eco_mean) | ismissing(inp.eco_var)
+
     PAMatch(alpha, beta, 
-            inp.timestamp, check_bool(inp.win),
+            inp.timestamp, check_bool_f(inp.win),
             inp.team_id, inp.team_size,
             inp.team_size_mean, 
             inp.team_size_var, inp.team_count,
-            inp.match_id, inp.eco,
-            inp.eco_mean, inp.eco_var,
-            check_bool(inp.all_dead), check_bool(inp.shared),
-            check_bool(inp.titans), check_bool(inp.ranked),
-            check_bool(inp.tourney))
+            inp.match_id, eco,
+            eco_mean, eco_var,
+            check_bool_f(inp.all_dead), check_bool_f(inp.shared),
+            check_bool_t(inp.titans), check_bool_f(inp.ranked),
+            check_bool_f(inp.tourney), unknown_eco)
 end
 
 struct PAMatches <: AbstractMatches
@@ -79,6 +99,7 @@ struct PAMatches <: AbstractMatches
     titans::Vector{Bool}
     ranked::Vector{Bool}
     tourney::Vector{Bool}
+    unknown_eco::Vector{Bool}
 end
 
 challenge(matches::PAMatches) = matches.challenge
@@ -105,7 +126,7 @@ function PAMatches(intable)::PAMatches
             cols.eco_mean, cols.eco_var,
             check_bool.(cols.all_dead), check_bool.(cols.shared),
             check_bool.(cols.titans), check_bool.(cols.ranked),
-            check_bool.(cols.tourney))
+            check_bool.(cols.tourney), cols.unknown_eco)
 end
 
 function Base.push!(t::PAMatches, s::PAMatch)
@@ -126,7 +147,7 @@ function merge(l::PAMatches, r::PAMatches)::PAMatches
 end
 
 function pa_aup(curr::PAMatch)::PAMatches
-    game_1::PAMatch = setproperties(curr, (alpha = 3, beta = 7, win = true))
+    game_1::PAMatch = setproperties(curr, (alpha = 1, beta = 1, win = true, unknown_eco = false))
     game_2::PAMatch = @set game_1.win = false
 
     PAMatches([game_1, game_2])
@@ -171,7 +192,13 @@ function pa_weight(curr::PAMatch, prev)::Float64
     get_challenge(match)::Beta{Float64} = match.challenge
 
     function bench_penalty(curr::PAMatch, prev)::Float64
-        penalty::Float64 = cdf(challenge(curr), mean(get_challenge(prev)))
+        curr_c = challenge(curr)
+        prev_c = get_challenge(prev)
+        if sum(params(curr_c)) < sum(params(prev_c))
+            penalty::Float64 = cdf(curr_c, mean(prev_c))
+        else
+            penalty = 1 - cdf(prev_c, mean(curr_c))
+        end
 
         if !prev.win
             penalty = 1 - penalty
@@ -239,6 +266,8 @@ function pa_weight(curr::PAMatch, prev)::Float64
 
     if (prev.tourney) weight *= 2.0 end
 
+    if (prev.unknown_eco) weight *= 0.75 end
+
     if isnan(weight) print(curr, "\n") end
 
     if (weight < 0) print(weight, "\n") end
@@ -248,8 +277,8 @@ function pa_weight(curr::PAMatch, prev)::Float64
 end
 
 function pa_skill(wins::Vector{Int16}, weights::Vector{<:Real})::Beta{Float64}
-    a::Float64 = sum(weights .* (wins ./ 2))
-    b::Float64 = sum(weights .* (1 .- wins ./ 2))
+    a::Float64 = sum(weights .* (wins ./ 2.0)) + .0001
+    b::Float64 = sum(weights .* (1.0 .- wins ./ 2.0)) + .0001
 
     if (isnan(a) || isnan(b)) print(weights, "\n") end
 
