@@ -48,6 +48,7 @@ struct DefaultMatches <: AbstractMatches
     challenge::Vector{Beta{Float64}}
     timestamp::Vector{Int64}
     win::Vector{Bool}
+    rating_weight::Vector{Float64}
 end
 
 challenge(matches::DefaultMatches) = matches.challenge
@@ -57,28 +58,17 @@ win(matches::DefaultMatches) = matches.win
 function DefaultMatches(intable)::DefaultMatches
     columns = Tables.columns(intable)
 
-    DefaultMatches(columns.challenge, columns.timestamp, columns.win)
+    DefaultMatches(columns.challenge, columns.timestamp, columns.win, columns.rating_weight)
 end
 
 const RowDefaultMatches = Vector{DefaultMatch}
 
 function default_AUP(curr::DefaultMatch)::DefaultMatches
-    DefaultMatches([Beta(1,1), Beta(1,1)], [curr.timestamp, curr.timestamp], [true, false])
+    DefaultMatches([Beta(1,1), Beta(1,1)], [curr.timestamp, curr.timestamp], [true, false], [1.0, 1.0])
 end
 
 
 function default_weight(curr::AbstractMatch, prev)::Float64
-
-    function bench_penalty(benchmark_1::Beta{Float64}, benchmark_2::Beta{Float64})::Float64
-        side_1::Float64 = cdf(benchmark_1, mean(benchmark_2))
-        side_2::Float64 = 1 - cdf(benchmark_2, mean(benchmark_1))
-
-        # if ((side_1 <= 0) || (side_2 <= 0)) print(side_1, ", ", side_2, ", from ", cdf(benchmark_2, mean(benchmark_1)), "\n") end
-
-        penalty::Float64 = side_1
-
-        # (side_1, side_2)
-    end
 
     function time_penalty(timestamp_1::Int64, timestamp_2::Int64)::Float64
         # The time penalty is e^(rt) where r is -0.02 and t is in days
@@ -94,9 +84,9 @@ function default_weight(curr::AbstractMatch, prev)::Float64
     end
 
     if prev.win
-        weight = bench_penalty(curr.challenge, prev.challenge)
+        weight = rating_penalty(curr.challenge, prev.challenge)
     else
-        weight = 1 - bench_penalty(curr.challenge, prev.challenge)
+        weight = 1 - rating_penalty(curr.challenge, prev.challenge)
     end
 
     weight *= time_penalty(curr.timestamp, prev.timestamp)
@@ -108,7 +98,21 @@ function default_weight(curr::AbstractMatch, prev)::Float64
     weight
 end
 
-function default_skill(wins::Vector{Bool}, weights::Vector{<:Real})::Beta{Float64}
+
+
+function default_skill(wins::Vector{Bool}, weights::Vector{<:Real}, challenges::Vector{<:Real})::Beta{Float64}
+    function challenge_window(rating_1::Beta{Float64}, rating_2::Beta{Float64})::Float64
+        if sum(params(rating_1)) < sum(params(rating_2))
+            penalty::Float64 = cdf(rating_1, mean(rating_2))
+        else
+            penalty = 1 - cdf(rating_2, mean(rating_2))
+        end
+    
+        penalty
+    end
+
+    
+
     a::Float64 = sum(weights[wins])
     b::Float64 = sum(weights[.!wins])
 
