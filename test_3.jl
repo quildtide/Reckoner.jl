@@ -30,8 +30,9 @@ function test_reckoner()::Dict{PlayerId, PAMatches}
             end
         end
         challenges::Vector{Beta{Float64}} = eff_challenge(curr, past_matches, inst)
+        chances::Vector{Float64} = player_win_chances(curr, past_matches, inst)
         
-        finished::Vector{PAMatch} = [setproperties(curr[i], (alpha = alpha(challenges[i]), beta = beta(challenges[i])))  for i in 1:length(challenges)]
+        finished::Vector{PAMatch} = [setproperties(curr[i], (win_chance = chances[i], alpha = alpha(challenges[i]), beta = beta(challenges[i])))  for i in 1:length(challenges)]
 
         for i in 1:length(curr)
             if game[i][2] in keys(player_hist)

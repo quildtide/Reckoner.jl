@@ -148,7 +148,7 @@ end
 
 function default_eff_challenge(ratings::Vector{Beta{Float64}}, teams::Vector{<:Integer})::Vector{Beta{Float64}}
     # Effectively measures the strength of the opponents "minus" 
-    n::Int64 = length(benchmarks)
+    n::Int64 = length(ratings)
 
     raw::Vector{Float64} = mean(allocate_losses(ratings, teams))
 
@@ -328,6 +328,18 @@ function eff_challenge(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{
     benches::Vector{Beta{Float64}} = benchmarks(curr, prev, inst)
 
     inst.eff_challenge(benches, team_id.(curr))
+end
+
+function player_win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Integer}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Vector{Float64} where {R, T}
+    team_chances::Vector{Float64} = mean(inst.win_chances(local_skills, teams))
+
+    [team_chances[i] for i in teams]
+end
+
+function player_win_chances(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Vector{Float64} where {R, T}
+    local_skills::Vector{Beta{Float64}} = skills(curr, prev, inst)
+
+    player_win_chances(local_skills, team_id.(curr), inst)
 end
 
 # function win_chances(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Vector{Beta{Float64}} where {R,T}
