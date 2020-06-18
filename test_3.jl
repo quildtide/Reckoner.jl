@@ -75,9 +75,9 @@ function test_reckoner_2(input::Dict{PlayerId, PAMatches}, locus::Vector{PAMatch
     players::Vector{PlayerId} = [i for i in keys(input)]
     skills::Vector{Beta{Float64}} = [benchmarks(locus, gen_past(locus, input[i]), inst)[1] for i in players]
 
-    rank_center::Vector{Float64} = display_rank.(mean.(skills), ratio, (inst,))
-    lb::Vector{Float64} = display_rank.(quantile.(skills, [.25]), ratio, (inst,))
-    ub::Vector{Float64} = display_rank.(quantile.(skills, [.75]), ratio, (inst,))
+    rank_center::Vector{Float64} = display_rank.(mean.(skills), (inst,))
+    lb::Vector{Float64} = display_rank.(quantile.(skills, [.25]), (inst,))
+    ub::Vector{Float64} = display_rank.(quantile.(skills, [.75]), (inst,))
     a::Vector{Float64} = alpha.(skills)
     b::Vector{Float64} = beta.(skills)
     player_id::Vector{String} = [i[2] for i in players]

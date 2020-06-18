@@ -282,8 +282,8 @@ function win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Intege
     inst.win_chances(local_skills, teams)
 end
 
-function display_rank(win_chance::Real, ratio::Real, inst::ReckonerInstance{R,T} = reckoner_defaults)::Float64 where {R, T}
-    inst.display_rank(win_chance, ratio)
+function display_rank(win_chance::Real, inst::ReckonerInstance{R,T} = reckoner_defaults)::Float64 where {R, T}
+    inst.display_rank(win_chance)
 end
 
 
