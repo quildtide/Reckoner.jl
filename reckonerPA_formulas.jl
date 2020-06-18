@@ -3,6 +3,7 @@ using Setfield
 include("Reckoner/src/default_formulas.jl")
 
 struct PAMatch <: AbstractMatch
+    win_chance::Float64
     alpha::Float64
     beta::Float64
     timestamp::Int64
@@ -24,6 +25,7 @@ struct PAMatch <: AbstractMatch
     unknown_eco::Bool
 end
 
+win_chance(m:PAMatch)::Float64 = m.win_chance
 challenge(m::PAMatch)::Beta{Float64} = Beta(m.alpha, m.beta)
 timestamp(m::PAMatch)::Int64 = m.timestamp
 win(m::PAMatch)::Int16 = (if m.win 2 elseif (m.all_dead && m.team_count == 2) 1 else 0 end)
@@ -83,6 +85,7 @@ function PAMatch(inp)::PAMatch
 end
 
 struct PAMatches <: AbstractMatches
+    win_chance::Vector{Float64}
     challenge::Vector{Beta{Float64}}
     timestamp::Vector{Int64}
     win::Vector{Bool}
@@ -102,6 +105,7 @@ struct PAMatches <: AbstractMatches
     unknown_eco::Vector{Bool}
 end
 
+win_chance(matches::PAMatches) = matches.win_chance
 challenge(matches::PAMatches) = matches.challenge
 timestamp(matches::PAMatches) = matches.timestamp
 win(m::PAMatches)::Vector{Int16} = 2 .* (m.win .& .!(m.all_dead))  + 1 .* (m.all_dead .& (m.team_count .== 2))
@@ -117,7 +121,7 @@ function PAMatches(intable)::PAMatches
         challenge = cols.challenge
     end 
 
-    PAMatches(challenge, 
+    PAMatches(win_chance, challenge, 
             cols.timestamp, check_bool.(cols.win),
             cols.team_size,
             cols.team_size_mean, 
@@ -147,34 +151,10 @@ function merge(l::PAMatches, r::PAMatches)::PAMatches
 end
 
 function pa_aup(curr::PAMatch)::PAMatches
-    game_1::PAMatch = setproperties(curr, (alpha = 1, beta = 1, win = true, unknown_eco = false))
+    game_1::PAMatch = setproperties(curr, (win_chance = 1, alpha = 1, beta = 1, win = true, unknown_eco = false))
     game_2::PAMatch = @set game_1.win = false
 
     PAMatches([game_1, game_2])
-end
-
-function pa_av_challenge(curr::Vector{PAMatch})::Vector{PAMatch}
-    n::Int64 = length(curr)
-
-    teams::Vector{Int64} = team_id.(curr)
-
-    alphas::Vector{Float64} = Vector{Float64}(undef, n)
-    betas::Vector{Float64} = Vector{Float64}(undef, n)
-
-    ecos::Vector{Float64} = eco.(curr) .+ 0.1
-
-
-    full::Float64 = sum(ecos)
-
-    for i in 1:n
-        team_strength::Float64  = sum(ecos[teams .== teams[i]])
-        betas[i]::Float64 = team_strength / full
-        alphas[i]::Float64 = 1 - betas[i]
-
-        if (!(betas[i] > 0) || !(alphas[i] > 0)) print(ecos) end
-    end
-
-    output::Vector{PAMatch} = [setproperties(curr[i], (alpha = alphas[i], beta = betas[i], win = true)) for i in (1:n)]
 end
 
 function pa_weight(curr::PAMatch, prev)::Float64
@@ -276,7 +256,9 @@ function pa_weight(curr::PAMatch, prev)::Float64
 
 end
 
-function pa_skill(wins::Vector{Int16}, weights::Vector{<:Real})::Beta{Float64}
+function pa_skill(wins::Vector{Int16}, weights::Vector{<:Real}, challenge_windows::Vector{<:Real})::Beta{Float64}
+    weights .*= challenge_windows
+
     a::Float64 = sum(weights .* (wins ./ 2.0)) + .0001
     b::Float64 = sum(weights .* (1.0 .- wins ./ 2.0)) + .0001
 
@@ -287,4 +269,15 @@ function pa_skill(wins::Vector{Int16}, weights::Vector{<:Real})::Beta{Float64}
     Beta(a, b)
 end
 
-pa_reck = ReckonerInstance{PAMatch, PAMatches}(AUP = pa_aup, av_challenge = pa_av_challenge, weight = pa_weight, skill = pa_skill)
+function pa_rating(wins::Vector{Bool}, weights::Vector{<:Real}, win_chances::Vector{<:Real})::Beta{Float64}
+    a::Float64 = sum(weights .* (wins ./ 2.0) .* (1 .- win_chances)) + .0001
+    b::Float64 = sum(weights .* (1.0 .- wins ./ 2.0) .* win_chances) + .0001
+
+    if (isnan(a) || isnan(b)) print(weights, "\n") end
+
+    if ((a <= 0) || (b <= 0)) print(a, ", ", b, "\n") end
+
+    Beta(a, b)
+end
+
+pa_reck = ReckonerInstance{PAMatch, PAMatches}(AUP = pa_aup, weight = pa_weight, skill = pa_skill, rating = pa_rating)
