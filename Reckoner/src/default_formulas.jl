@@ -97,7 +97,7 @@ function default_challenge_window(curr::AbstractMatch, prev)::Float64
         penalty = 1 - cdf(challenge_2, mean(challenge_2))
     end
 
-    if !win(prev)
+    if !prev.win
         penalty = 1 - penalty
     end
 
@@ -152,13 +152,18 @@ function default_eff_challenge(ratings::Vector{Beta{Float64}}, teams::Vector{<:I
 
     raw::Vector{Float64} = mean(allocate_losses(ratings, teams))
 
-    challenges::Vector{Beta{Float64}} = zeros(n)
+    challenges::Vector{Beta{Float64}} = Vector{Beta{Float64}}(undef, n)
 
     for i in 1:n
-        a_opp = raw[teams .!= teams[i]]
-        b_opp = raw[teams != teams[i]]
+        a_opp = sum(raw[teams .!= teams[i]])
+        b_opp = sum(raw[teams .== teams[i]])
 
-        challenges[i] = Beta(a_opp - beta(ratings[i]), b_opp - alpha(ratings[i]))
+        try
+            challenges[i] = Beta(a_opp - beta(ratings[i]), b_opp - alpha(ratings[i]))
+        catch
+            println(ratings)
+            println(teams)
+        end
     end
 
     challenges
@@ -221,8 +226,9 @@ end
 struct ReckonerInstance{R, T}
     AUP::Function
     weight::Function
+    challenge_window::Function
     skill::Function
-    av_challenge::Function
+    rating::Function
     eff_challenge::Function
     win_chances::Function
     rank_interval::Function
@@ -303,29 +309,29 @@ function challenge_windows(curr::Vector{R}, prev::Union{Vector{T}, Vector{R}}, i
 end
 
 function skill(curr::R, prev::T, inst::ReckonerInstance{R,T} = reckoner_defaults)::Beta{Float64} where {R, T}
-    calc_weights::Vector{Beta{Float64}} = weights(curr, prev, inst)
+    calc_weights::Vector{Float64} = weights(curr, prev, inst)
 
-    calc_windows::Vector{Beta{Float64}} = challenge_windows(curr, prev, inst)
+    calc_windows::Vector{Float64} = challenge_windows(curr, prev, inst)
 
     inst.skill(win(prev), calc_weights, calc_windows)
 end
 
-function skills(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Beta{Float64} where {R, T}
+function skills(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Vector{Beta{Float64}} where {R, T}
     skill.(curr, prev, (inst,))
 end
 
 function rating(curr::R, prev::T, inst::ReckonerInstance{R,T} = reckoner_defaults)::Beta{Float64} where {R, T}
-    calc_weights::Vector{Beta{Float64}} = weights(curr, prev, inst)
+    calc_weights::Vector{Float64} = weights(curr, prev, inst)
 
     inst.rating(win(prev), calc_weights, win_chance(prev))
 end
 
-function ratings(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Beta{Float64} where {R, T}
+function ratings(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Vector{Beta{Float64}} where {R, T}
     rating.(curr, prev, (inst,))
 end
 
 function eff_challenge(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Vector{Beta{Float64}} where {R,T}
-    benches::Vector{Beta{Float64}} = benchmarks(curr, prev, inst)
+    benches::Vector{Beta{Float64}} = ratings(curr, prev, inst)
 
     inst.eff_challenge(benches, team_id.(curr))
 end

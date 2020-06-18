@@ -25,7 +25,7 @@ struct PAMatch <: AbstractMatch
     unknown_eco::Bool
 end
 
-win_chance(m:PAMatch)::Float64 = m.win_chance
+win_chance(m::PAMatch)::Float64 = m.win_chance
 challenge(m::PAMatch)::Beta{Float64} = Beta(m.alpha, m.beta)
 timestamp(m::PAMatch)::Int64 = m.timestamp
 win(m::PAMatch)::Int16 = (if m.win 2 elseif (m.all_dead && m.team_count == 2) 1 else 0 end)
@@ -56,8 +56,8 @@ end
 function PAMatch(inp)::PAMatch
     # PAMatch(Beta(0.5, 0.5), inrow.timestamp, inrow.win, inrow.team_id)
     if (:alpha in propertynames(inp))
-        alpha::Float64 = inp.alpha
-        beta::Float64 = inp.beta
+        alpha::Float64 = replace_missing(inp.alpha, 0.5)
+        beta::Float64 = replace_missing(inp.beta, 0.5)
     elseif (:challenge in propertynames(inp))
         alpha = alpha(inp.challenge)
         beta = beta(inp.challenge)
@@ -66,13 +66,14 @@ function PAMatch(inp)::PAMatch
         beta = 0.5
     end 
 
+    win_chance::Float64 = replace_missing(inp.win_chance, 0.5)
     eco::Float64 = replace_missing(inp.eco, 1.0)
     eco_mean::Float64 = replace_missing(inp.eco_mean, 1.0)
     eco_var::Float64 = replace_missing(inp.eco_var, 0.0)
 
     unknown_eco::Bool = ismissing(inp.eco) | ismissing(inp.eco_mean) | ismissing(inp.eco_var)
 
-    PAMatch(alpha, beta, 
+    PAMatch(win_chance, alpha, beta, 
             inp.timestamp, check_bool_f(inp.win),
             inp.team_id, inp.team_size,
             inp.team_size_mean, 
@@ -112,6 +113,9 @@ win(m::PAMatches)::Vector{Int16} = 2 .* (m.win .& .!(m.all_dead))  + 1 .* (m.all
 eco(m::PAMatches)::Vector{Float64} = m.eco
 eco_mean(m::PAMatches)::Vector{Float64} = m.eco_mean
 
+
+challenge(match::Tables.ColumnsRow{PAMatches}) = match.challenge
+
 function PAMatches(intable)::PAMatches
     cols = Tables.columns(intable)
    
@@ -121,7 +125,7 @@ function PAMatches(intable)::PAMatches
         challenge = cols.challenge
     end 
 
-    PAMatches(win_chance, challenge, 
+    PAMatches(cols.win_chance, challenge, 
             cols.timestamp, check_bool.(cols.win),
             cols.team_size,
             cols.team_size_mean, 
@@ -151,8 +155,8 @@ function merge(l::PAMatches, r::PAMatches)::PAMatches
 end
 
 function pa_aup(curr::PAMatch)::PAMatches
-    game_1::PAMatch = setproperties(curr, (win_chance = 1, alpha = 1, beta = 1, win = true, unknown_eco = false))
-    game_2::PAMatch = @set game_1.win = false
+    game_1::PAMatch = setproperties(curr, (win_chance = 0.5, alpha = 1, beta = 1, win = true, unknown_eco = false))
+    game_2::PAMatch = setproperties(game_1, (win_chance = 0.5, win = false))
 
     PAMatches([game_1, game_2])
 end
@@ -170,22 +174,6 @@ function pa_weight(curr::PAMatch, prev)::Float64
     get_challenge(match::PAMatch)::Beta{Float64} = challenge(match)
 
     get_challenge(match)::Beta{Float64} = match.challenge
-
-    function bench_penalty(curr::PAMatch, prev)::Float64
-        curr_c = challenge(curr)
-        prev_c = get_challenge(prev)
-        if sum(params(curr_c)) < sum(params(prev_c))
-            penalty::Float64 = cdf(curr_c, mean(prev_c))
-        else
-            penalty = 1 - cdf(prev_c, mean(curr_c))
-        end
-
-        if !prev.win
-            penalty = 1 - penalty
-        end
-
-        penalty
-    end
 
     function time_penalty(timestamp_1::Int64, timestamp_2::Int64)::Float64
         # The time penalty is e^(rt) where r is -0.02 and t is in days
@@ -230,9 +218,7 @@ function pa_weight(curr::PAMatch, prev)::Float64
         return 0.0
     end
 
-    weight = bench_penalty(curr, prev)
-
-    weight *= time_penalty(curr.timestamp, prev.timestamp)
+    weight = time_penalty(curr.timestamp, prev.timestamp)
 
     weight *= team_penalty(curr, prev)
 
@@ -256,11 +242,24 @@ function pa_weight(curr::PAMatch, prev)::Float64
 
 end
 
+function pa_challenge_window(curr::AbstractMatch, prev)::Float64
+    challenge_1::Beta{Float64} = challenge(curr)
+    challenge_2::Beta{Float64} = challenge(prev)
+
+    if sum(params(challenge_1)) < sum(params(challenge_2))
+        penalty::Float64 = cdf(challenge_1, mean(challenge_2))
+    else
+        penalty = 1 - cdf(challenge_2, mean(challenge_2))
+    end
+
+    penalty
+end
+
 function pa_skill(wins::Vector{Int16}, weights::Vector{<:Real}, challenge_windows::Vector{<:Real})::Beta{Float64}
     weights .*= challenge_windows
 
-    a::Float64 = sum(weights .* (wins ./ 2.0)) + .0001
-    b::Float64 = sum(weights .* (1.0 .- wins ./ 2.0)) + .0001
+    a::Float64 = sum(weights .* (wins ./ 2.0) .* challenge_windows)
+    b::Float64 = sum(weights .* (1.0 .- wins ./ 2.0) .* (1 .- challenge_windows))
 
     if (isnan(a) || isnan(b)) print(weights, "\n") end
 
@@ -269,9 +268,9 @@ function pa_skill(wins::Vector{Int16}, weights::Vector{<:Real}, challenge_window
     Beta(a, b)
 end
 
-function pa_rating(wins::Vector{Bool}, weights::Vector{<:Real}, win_chances::Vector{<:Real})::Beta{Float64}
-    a::Float64 = sum(weights .* (wins ./ 2.0) .* (1 .- win_chances)) + .0001
-    b::Float64 = sum(weights .* (1.0 .- wins ./ 2.0) .* win_chances) + .0001
+function pa_rating(wins::Vector{Int16}, weights::Vector{<:Real}, win_chances::Vector{<:Real})::Beta{Float64}
+    a::Float64 = sum(weights .* (wins ./ 2.0) .* (1 .- win_chances))
+    b::Float64 = sum(weights .* (1.0 .- wins ./ 2.0) .* win_chances)
 
     if (isnan(a) || isnan(b)) print(weights, "\n") end
 
