@@ -139,7 +139,7 @@ function allocate_losses(skills::Vector{Beta{Float64}}, teams::Vector{<:Integer}
 
     for i in 1:n
         team_size::Integer = sum(teams .== teams[i])
-        totals[1:end .!= i] .+= (beta(skills[i]) / (n - 1))
+        totals[teams .!= teams[i]] .+= (beta(skills[i]) / (n - team_size))
         totals[i] += alpha(skills[i])
     end
 
@@ -150,7 +150,7 @@ function default_eff_challenge(ratings::Vector{Beta{Float64}}, teams::Vector{<:I
     # Effectively measures the strength of the opponents "minus" 
     n::Int64 = length(ratings)
 
-    raw::Vector{Float64} = mean(allocate_losses(ratings, teams))
+    raw::Vector{Float64} = params(allocate_losses(ratings, teams))[1]
 
     challenges::Vector{Beta{Float64}} = Vector{Beta{Float64}}(undef, n)
 
@@ -180,6 +180,15 @@ function default_win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{
         merged_params[teams[i]] += raw[i]
     end
 
+    try
+        Dirichlet([merged_params[i] for i in teams])
+    catch
+        println(merged_params)
+        println(raw)
+        println(teams)
+        println(allocate_losses(local_skills, teams))
+        println(local_skills)
+    end
     Dirichlet([merged_params[i] for i in teams])
 end
 

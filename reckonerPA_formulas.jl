@@ -155,8 +155,8 @@ function merge(l::PAMatches, r::PAMatches)::PAMatches
 end
 
 function pa_aup(curr::PAMatch)::PAMatches
-    game_1::PAMatch = setproperties(curr, (win_chance = 0.5, alpha = 1, beta = 1, win = true, unknown_eco = false))
-    game_2::PAMatch = setproperties(game_1, (win_chance = 0.5, win = false))
+    game_1::PAMatch = setproperties(curr, (win_chance = 0.3, alpha = 1, beta = 1, win = true, unknown_eco = false, all_dead = false))
+    game_2::PAMatch = setproperties(game_1, (win_chance = 0.7, win = false))
 
     PAMatches([game_1, game_2])
 end

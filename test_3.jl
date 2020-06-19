@@ -70,16 +70,15 @@ function gen_past(locus::Vector{PAMatch}, prev::PAMatches)::Vector{PAMatches}
 end
 
 function test_reckoner_2(input::Dict{PlayerId, PAMatches}, locus::Vector{PAMatch}, output_name::String)::Nothing
-    ratio::Float64 = locus[1].team_size / (locus[1].team_size_mean * locus[1].team_count - locus[1].team_size)
 
     players::Vector{PlayerId} = [i for i in keys(input)]
-    skills::Vector{Beta{Float64}} = [benchmarks(locus, gen_past(locus, input[i]), inst)[1] for i in players]
+    rats::Vector{Beta{Float64}} = [ratings(locus, gen_past(locus, input[i]), inst)[1] for i in players]
 
-    rank_center::Vector{Float64} = display_rank.(mean.(skills), (inst,))
-    lb::Vector{Float64} = display_rank.(quantile.(skills, [.25]), (inst,))
-    ub::Vector{Float64} = display_rank.(quantile.(skills, [.75]), (inst,))
-    a::Vector{Float64} = alpha.(skills)
-    b::Vector{Float64} = beta.(skills)
+    rank_center::Vector{Float64} = display_rank.(mean.(rats), (inst,))
+    lb::Vector{Float64} = display_rank.(quantile.(rats, [.25]), (inst,))
+    ub::Vector{Float64} = display_rank.(quantile.(rats, [.75]), (inst,))
+    a::Vector{Float64} = alpha.(rats)
+    b::Vector{Float64} = beta.(rats)
     player_id::Vector{String} = [i[2] for i in players]
 
     out_table = NamedTuple{(:player_id, :rank_center, :lb, :ub, :a, :b)}([player_id, rank_center, lb, ub, a, b])
@@ -90,7 +89,7 @@ function test_reckoner_2(input::Dict{PlayerId, PAMatches}, locus::Vector{PAMatch
 end
 
 function get_ratings_1v1(input::Dict{PlayerId, PAMatches})::Nothing
-    example::PAMatch = PAMatch((alpha=0.5, beta=0.5, timestamp=1589135718, 
+    example::PAMatch = PAMatch((win_chance = 0.5, alpha=0.5, beta=0.5, timestamp=1592453978, 
                         win=false, team_id=1, team_size = 1, team_size_mean = 1.0, 
                         team_size_var = 0.0, team_count = 2, match_id = 0, eco = 1.0, 
                         eco_mean = 1.0, eco_var = 0.0, all_dead = false, shared = false, 
@@ -102,7 +101,7 @@ function get_ratings_1v1(input::Dict{PlayerId, PAMatches})::Nothing
 end
 
 function get_ratings_5v5(input::Dict{PlayerId, PAMatches})::Nothing
-    example::PAMatch = PAMatch((alpha=0.5, beta=0.5, timestamp=1589135718, 
+    example::PAMatch = PAMatch((win_chance = 0.5, alpha=0.5, beta=0.5, timestamp=1592453978, 
                         win=false, team_id=1, team_size = 5, team_size_mean = 5.0, 
                         team_size_var = 0.0, team_count = 2, match_id = 0, eco = 1.0, 
                         eco_mean = 1.0, eco_var = 0.0, all_dead = false, shared = false, 
@@ -114,7 +113,7 @@ function get_ratings_5v5(input::Dict{PlayerId, PAMatches})::Nothing
 end
 
 function get_ratings_10FFA(input::Dict{PlayerId, PAMatches})::Nothing
-    example::PAMatch = PAMatch((alpha=0.5, beta=0.5, timestamp=1589135718, 
+    example::PAMatch = PAMatch((win_chance = 0.5, alpha=0.5, beta=0.5, timestamp=1592453978, 
                         win=false, team_id=1, team_size = 1, team_size_mean = 1.0, 
                         team_size_var = 0.0, team_count = 10, match_id = 0, eco = 1.0, 
                         eco_mean = 1.0, eco_var = 0.0, all_dead = false, shared = false, 
