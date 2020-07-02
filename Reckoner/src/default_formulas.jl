@@ -146,12 +146,7 @@ function default_eff_challenge(ratings::Vector{Beta{Float64}}, teams::Vector{<:I
         a_opp = sum(raw[teams .!= teams[i]])
         b_opp = sum(raw[teams .== teams[i]])
 
-        try
-            challenges[i] = Beta(a_opp - beta(ratings[i]), b_opp - alpha(ratings[i]))
-        catch
-            println(ratings)
-            println(teams)
-        end
+        challenges[i] = Beta(a_opp - beta(ratings[i]), b_opp - alpha(ratings[i]))
     end
 
     challenges
@@ -168,15 +163,6 @@ function default_win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{
         merged_params[teams[i]] += raw[i]
     end
 
-    try
-        Dirichlet([merged_params[i] for i in teams])
-    catch
-        println(merged_params)
-        println(raw)
-        println(teams)
-        println(allocate_losses(local_skills, teams))
-        println(local_skills)
-    end
     Dirichlet([merged_params[i] for i in teams])
 end
 
@@ -198,25 +184,25 @@ function default_display_rank(win_chance::Real)::Float64
     display_rank
 end
 
-function default_display_rank(win_chance::Real, ratio::Real)::Float64
-    base_display::Int32 = 1000
+# function default_display_rank(win_chance::Real, ratio::Real)::Float64
+#     base_display::Int32 = 1000
 
-    display_rank::Float64 = base_display * (1 / (1 - win_chance) - ratio)
+#     display_rank::Float64 = base_display * (1 / (1 - win_chance) - ratio)
 
-    threshold::Int32 = 2000
+#     threshold::Int32 = 2000
 
-    if (display_rank > threshold)
-        display_rank = log(display_rank) / log(threshold) * threshold
-    end
+#     if (display_rank > threshold)
+#         display_rank = log(display_rank) / log(threshold) * threshold
+#     end
 
-    display_rank
-end
+#     display_rank
+# end
 
-function bradley_terry_display(win_chance::Real)::Float64
-    1500 * (1/win_chance - 1)^-1
-end
+# function bradley_terry_display(win_chance::Real)::Float64
+#     1500 * (1/win_chance - 1)^-1
+# end
 
-function elo_display(win_chance::Real)::Float64
-    1500 - 400(log10((1/win_chance) - 1)) 
-end
+# function elo_display(win_chance::Real)::Float64
+#     1500 - 400(log10((1/win_chance) - 1)) 
+# end
 
