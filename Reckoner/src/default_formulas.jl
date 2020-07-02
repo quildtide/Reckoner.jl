@@ -259,7 +259,7 @@ struct ReckonerInstance{R, T}
     end
 end
 
-reckoner_defaults = ReckonerInstance{DefaultMatch, DefaultMatches}()
+const reckoner_defaults = ReckonerInstance{DefaultMatch, DefaultMatches}()
 
 # Redefine elemental functions in terms of a specific ReckonerInstance
 

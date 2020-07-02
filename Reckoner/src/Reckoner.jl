@@ -1,7 +1,23 @@
 module Reckoner
 
-include("./default_formulas.jl")
+    include("./default_formulas.jl")
 
-skill = default_skill
+    export AbstractMatch, AbstractMatches
+
+    export DefaultMatch, DefaultMatches
+
+    export ReckonerInstance
+
+    export reckoner_defaults
+
+    export  aup, 
+            weight, 
+            challenge_window, 
+            skill, 
+            rating, 
+            eff_challenge, 
+            win_chances, 
+            display_rank, 
+            player_win_chances
 
 end # module
