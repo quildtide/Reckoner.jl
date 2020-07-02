@@ -155,8 +155,22 @@ function merge(l::PAMatches, r::PAMatches)::PAMatches
 end
 
 function pa_aup(curr::PAMatch)::PAMatches
-    game_1::PAMatch = setproperties(curr, (win_chance = 0.3, alpha = 1, beta = 1, win = true, unknown_eco = false, all_dead = false))
-    game_2::PAMatch = setproperties(game_1, (win_chance = 0.7, win = false))
+    def_alpha::Float64 = 2.5
+    def_beta::Float64 = 2.5
+
+    if curr.tourney
+        def_alpha = 4.0
+        def_beta = 1.5
+    elseif curr.ranked
+        def_alpha = 3.5
+        def_beta = 1.5
+    end
+
+    game_1::PAMatch = setproperties(curr, ( win_chance = (1.0 - def_alpha), 
+                                            alpha = def_alpha, beta = def_beta, 
+                                            win = true, unknown_eco = false, 
+                                            all_dead = false, ranked = false, tourney = false))
+    game_2::PAMatch = setproperties(game_1, (win_chance = def_beta, win = false))
 
     PAMatches([game_1, game_2])
 end
@@ -249,7 +263,7 @@ function pa_challenge_window(curr::AbstractMatch, prev)::Float64
     if sum(params(challenge_1)) < sum(params(challenge_2))
         penalty::Float64 = cdf(challenge_1, mean(challenge_2))
     else
-        penalty = 1 - cdf(challenge_2, mean(challenge_2))
+        penalty = 1 - cdf(challenge_2, mean(challenge_1))
     end
 
     penalty
@@ -279,4 +293,4 @@ function pa_rating(wins::Vector{Int16}, weights::Vector{<:Real}, win_chances::Ve
     Beta(a, b)
 end
 
-pa_reck = ReckonerInstance{PAMatch, PAMatches}(AUP = pa_aup, weight = pa_weight, skill = pa_skill, rating = pa_rating)
+pa_reck = ReckonerInstance{PAMatch, PAMatches}(AUP = pa_aup, weight = pa_weight, skill = pa_skill, rating = pa_rating, challenge_window = pa_challenge_window)
