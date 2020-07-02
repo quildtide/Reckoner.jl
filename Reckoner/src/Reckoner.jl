@@ -1,6 +1,6 @@
 module Reckoner
 
-    include("./default_formulas.jl")
+    include("interface.jl")
 
     export AbstractMatch, AbstractMatches
 
