@@ -16,12 +16,6 @@ geom_mean(dists::Vector{Beta{Float64}})::Beta{Float64} = Beta(geom_mean(alpha.(d
 
 scale(dist::Beta{Float64}, scale::Real)::Beta{Float64} = Beta(alpha(dist) * scale, beta(dist) * scale)
 
-abstract type AbstractMatch <: Tables.AbstractRow end
-
-Base.getproperty(m::AbstractMatch, nm::Symbol) = getfield(m, nm)
-Base.propertynames(m::AbstractMatch) = fieldnames(typeof(m))
-Tables.schema(m::AbstractMatch) = Tables.Schema(propertynames(m), Tuple(typeof.(m)))
-
 struct DefaultMatch <: AbstractMatch
     challenge::Beta{Float64}
     timestamp::Int64
@@ -37,12 +31,6 @@ challenge(match::DefaultMatch) = match.challenge
 timestamp(match::DefaultMatch) = match.timestamp
 win(match::DefaultMatch) = match.win
 team_id(match::DefaultMatch) = match.team_id
-
-abstract type AbstractMatches <: Tables.AbstractColumns end
-
-Base.getproperty(m::AbstractMatches, nm::Symbol) = getfield(m, nm)
-Base.propertynames(m::AbstractMatches) = fieldnames(typeof(m))
-Tables.schema(m::AbstractMatches) = Tables.Schema(propertynames(m), Tuple(typeof(i[1]) for i in m))
 
 struct DefaultMatches <: AbstractMatches
     challenge::Vector{Beta{Float64}}
@@ -64,7 +52,7 @@ end
 
 const RowDefaultMatches = Vector{DefaultMatch}
 
-function default_AUP(curr::DefaultMatch)::DefaultMatches
+function default_aup(curr::DefaultMatch)::DefaultMatches
     DefaultMatches([Beta(1,1), Beta(1,1)], [curr.timestamp, curr.timestamp], [true, false], [1.0, 1.0])
 end
 
@@ -233,7 +221,7 @@ function elo_display(win_chance::Real)::Float64
 end
 
 struct ReckonerInstance{R, T}
-    AUP::Function
+    aup::Function
     weight::Function
     challenge_window::Function
     skill::Function
@@ -244,7 +232,7 @@ struct ReckonerInstance{R, T}
     display_rank::Function
 
     function ReckonerInstance{R, T}(;
-                AUP::Function = default_AUP,
+                aup::Function = default_aup,
                 weight::Function = default_weight,
                 challenge_window::Function = default_challenge_window,
                 skill::Function = default_skill,
@@ -255,7 +243,7 @@ struct ReckonerInstance{R, T}
                 display_rank::Function = default_display_rank
                 )::ReckonerInstance where {R, T}
 
-        new(AUP, weight, challenge_window, skill, rating, eff_challenge, win_chances, rank_interval, display_rank)
+        new(aup, weight, challenge_window, skill, rating, eff_challenge, win_chances, rank_interval, display_rank)
     end
 end
 
@@ -263,8 +251,8 @@ const reckoner_defaults = ReckonerInstance{DefaultMatch, DefaultMatches}()
 
 # Redefine elemental functions in terms of a specific ReckonerInstance
 
-function AUP(curr::R, inst::ReckonerInstance{R,T} = reckoner_defaults)::T where {R, T}
-    inst.AUP(curr)
+function aup(curr::R, inst::ReckonerInstance{R,T} = reckoner_defaults)::T where {R, T}
+    inst.aup(curr)
 end
 
 function weight(curr::R, prev::R, inst::ReckonerInstance{R,T} = reckoner_defaults)::Float64 where {R, T} 
