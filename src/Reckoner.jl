@@ -20,4 +20,9 @@ module Reckoner
             display_rank, 
             player_win_chances
 
+    export  challenge,
+            timestamp,
+            win,
+            team_id
+
 end # module
