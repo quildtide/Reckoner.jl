@@ -18,7 +18,12 @@ module Reckoner
             eff_challenge, 
             win_chances, 
             display_rank, 
-            player_win_chances
+            player_win_chances,
+            weights,
+            ratings,
+            challenge_windows,
+            skills
+
 
     export  challenge,
             timestamp,
