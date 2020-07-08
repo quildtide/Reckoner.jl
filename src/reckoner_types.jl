@@ -1,5 +1,7 @@
 using Distributions
 
+import Tables
+
 abstract type AbstractMatch <: Tables.AbstractRow end
 
 Base.getproperty(m::AbstractMatch, nm::Symbol) = getfield(m, nm)
