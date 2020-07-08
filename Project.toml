@@ -1,7 +1,7 @@
 name = "Reckoner"
 uuid = "bbd1d0f0-76cb-11ea-2afc-bb8485d7c580"
 authors = ["Thalassocracy <42811940+Thalassocracy@users.noreply.github.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
