@@ -55,7 +55,7 @@ function eff_challenge(benchmarks::Vector{Beta{Float64}}, teams::Vector{<:Intege
     inst.eff_challenge(benchmarks, teams)
 end
 
-function win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Integer}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Dirichlet{Float64} where {R, T}
+function win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Integer}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Vector{Beta{Float64}} where {R, T}
     inst.win_chances(local_skills, teams)
 end
 
@@ -114,7 +114,7 @@ function eff_challenge(curr::Vector{R}, prev::Vector{T}, inst::ReckonerInstance{
 end
 
 function player_win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Integer}, inst::ReckonerInstance{R,T} = reckoner_defaults)::Vector{Float64} where {R, T}
-    team_chances::Vector{Float64} = mean(inst.win_chances(local_skills, teams))
+    team_chances::Vector{Float64} = mean.(inst.win_chances(local_skills, teams))
 
     [team_chances[i] for i in teams]
 end

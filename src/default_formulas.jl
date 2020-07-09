@@ -153,18 +153,22 @@ function default_eff_challenge(ratings::Vector{Beta{Float64}}, teams::Vector{<:I
     challenges
 end
 
-function default_win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Integer})::Dirichlet{Float64}
-    raw::Vector{Float64} = mean(allocate_losses(local_skills, teams))
+function default_win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Integer})::Vector{Beta{Float64}}
+    n::Int64 = maximum(teams)
 
-    n::Int64 = length(local_skills)
-
-    merged_params::Vector{Float64} = zeros(maximum(teams))
+    chances::Vector{Beta{Float64}} = Vector{Beta{Float64}}(undef, n)
 
     for i in 1:n
-        merged_params[teams[i]] += raw[i]
+        a_team::Float64 = sum(alpha.(local_skills[teams .== i]))
+        b_team::Float64 = sum(beta.(local_skills[teams .== i]))
+
+        a_opp::Float64 = sum(alpha.(local_skills[teams .!= i]))
+        b_opp::Float64 = sum(beta(local_skills[teams .!= i]))
+
+        chances[i] = Beta(a_team + b_opp, b_team + a_opp)
     end
 
-    Dirichlet([merged_params[i] for i in teams])
+    chances
 end
 
 function default_rank_interval(skill::Beta{Float64})::Tuple{Float64, Float64}
