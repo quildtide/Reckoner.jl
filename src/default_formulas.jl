@@ -149,6 +149,13 @@ function default_eff_challenge(ratings::Vector{Beta{Float64}}, teams::Vector{<:I
         a_ally::Float64 = sum(alpha.(ratings[team]))
         b_ally::Float64 = sum(beta.(ratings[team]))
 
+        if (!(a_opp + b_ally) > 0.0 || !(b_opp + a_ally) > 0.0)
+            println(ratings)
+            println(teams)
+            println("opp: $a_opp, $b_opp")
+            println("allies: $a_ally, $b_ally") 
+        end
+
         challenges[i] = Beta(a_opp + b_ally, b_opp + a_ally)
     end
 
