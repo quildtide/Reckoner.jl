@@ -165,7 +165,7 @@ function default_win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{
         b_team::Float64 = sum(beta.(local_skills[teams .== i]))
 
         a_opp::Float64 = sum(alpha.(local_skills[teams .!= i]))
-        b_opp::Float64 = sum(beta(local_skills[teams .!= i]))
+        b_opp::Float64 = sum(beta.(local_skills[teams .!= i]))
 
         chances[i] = Beta(a_team + b_opp, b_team + a_opp)
     end
