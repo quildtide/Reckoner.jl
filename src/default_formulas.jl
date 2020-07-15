@@ -135,10 +135,12 @@ function allocate_losses(skills::Vector{Beta{Float64}}, teams::Vector{<:Integer}
 end
 
 function default_eff_challenge(ratings::Vector{Beta{Float64}}, teams::Vector{<:Integer})::Vector{Beta{Float64}}
-    # Effectively measures the strength of the opponents "minus" 
+    # Effectively measures the strength of the opponents "minus" the strength of teammates
     n::Int64 = length(ratings)
 
     challenges::Vector{Beta{Float64}} = Vector{Beta{Float64}}(undef, n)
+
+    av_sz::Float64 = n / length(unique(teams))
 
     for i in 1:n
         opp::BitArray = teams .!= teams[i]
@@ -149,35 +151,41 @@ function default_eff_challenge(ratings::Vector{Beta{Float64}}, teams::Vector{<:I
         a_ally::Float64 = sum(alpha.(ratings[team]))
         b_ally::Float64 = sum(beta.(ratings[team]))
 
-        if (!((a_opp + b_ally) > 0.0) || !((b_opp + a_ally) > 0.0))
+        a_eff::Float64 = (a_opp + b_ally) * av_sz / (sum(team) + 1)
+        b_eff::Float64 = (b_opp + a_ally) * av_sz / (sum(opp))
+
+        
+        if (!(a_eff > 0.0) || !(b_eff > 0.0))
             println(ratings)
             println(teams)
             println("opp: $a_opp, $b_opp")
             println("allies: $a_ally, $b_ally") 
         end
 
-        challenges[i] = Beta(a_opp + b_ally, b_opp + a_ally)
+        challenges[i] = Beta(a_eff, b_eff)
     end
 
     challenges
 end
 
 function default_win_chances(local_skills::Vector{Beta{Float64}}, teams::Vector{<:Integer})::Vector{Beta{Float64}}
+    # We're actually constructing a Dirichlet distribution here and then taking the marginal distributions per team.
+    # We've just skipped the part where we explictly call anything a Dirichlet distribution
     n::Int64 = maximum(teams)
 
-    chances::Vector{Beta{Float64}} = Vector{Beta{Float64}}(undef, n)
+    alphas::Vector{Float64} = Vector{Float64}(undef, n)
 
     for i in 1:n
         a_team::Float64 = sum(alpha.(local_skills[teams .== i]))
-        b_team::Float64 = sum(beta.(local_skills[teams .== i]))
 
-        a_opp::Float64 = sum(alpha.(local_skills[teams .!= i]))
-        b_opp::Float64 = sum(beta.(local_skills[teams .!= i]))
+        b_opp::Float64 = sum(beta.(local_skills[teams .!= i])) / (n - 1)
 
-        chances[i] = Beta(a_team + b_opp, b_team + a_opp)
+        alphas[i] = a_team + b_opp
     end
 
-    chances
+    total::Float64 = sum(alphas)
+
+    chances::Vector{Beta{Float64}} = Beta.(alphas, total .- alphas)
 end
 
 function default_rank_interval(skill::Beta{Float64})::Tuple{Float64, Float64}
