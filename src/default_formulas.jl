@@ -3,19 +3,6 @@ import Tables
 
 include("reckoner_types.jl")
 
-alpha(dist::Beta{Float64})::Float64 = params(dist)[1]
-beta(dist::Beta{Float64})::Float64 = params(dist)[2]
-update(prior::Beta, new_a::Real, new_b::Real)::Beta = Beta(alpha(prior) + new_a, beta(prior) + new_b)
-update(left::Beta, right::Beta)::Beta = update(left, alpha(right), beta(right))
-update(priors::Vector{<:Beta})::Beta = Beta(sum(alpha.(priors)), sum(beta.(priors)))
-reflect(dist::Beta)::Beta = Beta(beta(dist), alpha(dist))
-
-geom_mean(vals::Vector{Float64})::Float64 = exp(sum(log.(vals)) / length(vals))
-    
-geom_mean(dists::Vector{Beta{Float64}})::Beta{Float64} = Beta(geom_mean(alpha.(dists)), geom_mean(beta.(dists)))
-
-scale(dist::Beta{Float64}, scale::Real)::Beta{Float64} = Beta(alpha(dist) * scale, beta(dist) * scale)
-
 struct DefaultMatch <: AbstractMatch
     challenge::Beta{Float64}
     timestamp::Int64
