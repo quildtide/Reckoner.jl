@@ -2,7 +2,7 @@ module Reckoner
 
     include("interface.jl")
 
-    export AbstractMatch, AbstractMatches
+    export AbstractReckonerMatch, AbstractReckonerMatches
 
     export DefaultMatch, DefaultMatches
 

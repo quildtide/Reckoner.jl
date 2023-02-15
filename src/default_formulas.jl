@@ -16,7 +16,7 @@ geom_mean(dists::Vector{Beta{Float64}})::Beta{Float64} = Beta(geom_mean(alpha.(d
 
 scale(dist::Beta{Float64}, scale::Real)::Beta{Float64} = Beta(alpha(dist) * scale, beta(dist) * scale)
 
-struct DefaultMatch <: AbstractMatch
+struct DefaultMatch <: AbstractReckonerMatch
     challenge::Beta{Float64}
     timestamp::Int64
     win::Bool
@@ -32,7 +32,7 @@ timestamp(match::DefaultMatch) = match.timestamp
 win(match::DefaultMatch) = match.win
 team_id(match::DefaultMatch) = match.team_id
 
-struct DefaultMatches <: AbstractMatches
+struct DefaultMatches <: AbstractReckonerMatches
     challenge::Vector{Beta{Float64}}
     timestamp::Vector{Int64}
     win::Vector{Bool}
@@ -57,7 +57,7 @@ function default_aup(curr::DefaultMatch)::DefaultMatches
 end
 
 
-function default_weight(curr::AbstractMatch, prev)::Float64
+function default_weight(curr::AbstractReckonerMatch, prev)::Float64
 
     function time_penalty(timestamp_1::Int64, timestamp_2::Int64)::Float64
         # The time penalty is e^(rt) where r is -0.02 and t is in days
@@ -75,7 +75,7 @@ function default_weight(curr::AbstractMatch, prev)::Float64
     weight = time_penalty(curr.timestamp, prev.timestamp)
 end
 
-function default_challenge_window(curr::AbstractMatch, prev)::Float64
+function default_challenge_window(curr::AbstractReckonerMatch, prev)::Float64
     challenge_1::Beta{Float64} = challenge(curr)
     challenge_2::Beta{Float64} = challenge(prev)
 

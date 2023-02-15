@@ -2,15 +2,15 @@ using Distributions
 
 import Tables
 
-abstract type AbstractMatch <: Tables.AbstractRow end
+abstract type AbstractReckonerMatch <: Tables.AbstractRow end
 
-Base.getproperty(m::AbstractMatch, nm::Symbol) = getfield(m, nm)
-Base.propertynames(m::AbstractMatch) = fieldnames(typeof(m))
-Tables.schema(m::AbstractMatch) = Tables.Schema(propertynames(m), Tuple(typeof.(m)))
+Base.getproperty(m::AbstractReckonerMatch, nm::Symbol) = getfield(m, nm)
+Base.propertynames(m::AbstractReckonerMatch) = fieldnames(typeof(m))
+Tables.schema(m::AbstractReckonerMatch) = Tables.Schema(propertynames(m), Tuple(typeof.(m)))
 
 
-abstract type AbstractMatches <: Tables.AbstractColumns end
+abstract type AbstractReckonerMatches <: Tables.AbstractColumns end
 
-Base.getproperty(m::AbstractMatches, nm::Symbol) = getfield(m, nm)
-Base.propertynames(m::AbstractMatches) = fieldnames(typeof(m))
-Tables.schema(m::AbstractMatches) = Tables.Schema(propertynames(m), Tuple(typeof(i[1]) for i in m))
+Base.getproperty(m::AbstractReckonerMatches, nm::Symbol) = getfield(m, nm)
+Base.propertynames(m::AbstractReckonerMatches) = fieldnames(typeof(m))
+Tables.schema(m::AbstractReckonerMatches) = Tables.Schema(propertynames(m), Tuple(typeof(i[1]) for i in m))
